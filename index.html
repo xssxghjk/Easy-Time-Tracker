@@ -51,7 +51,7 @@ body::before {
 }
 .header-inner {
   max-width: 900px; margin: 0 auto;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 12px;
 }
@@ -77,6 +77,26 @@ body::before {
   margin-top: 2px;
 }
 .header-add-btn:hover { opacity: 0.85; }
+
+/* ── TABS ── */
+.tab-bar {
+  max-width: 900px; margin: 0 auto;
+  display: flex;
+}
+.tab-btn {
+  background: none; border: none;
+  color: var(--muted);
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 12px; cursor: pointer;
+  padding: 8px 16px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  transition: color 0.15s;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--accent); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
 /* ── MAIN ── */
 .main {
@@ -125,66 +145,7 @@ body::before {
   padding: 2px 9px; border-radius: 999px;
 }
 
-/* ── RUNNING SECTION ── */
-.running-section { margin-bottom: 28px; }
-.running-empty {
-  font-size: 13px; color: var(--muted2); font-style: italic;
-  padding: 18px 16px; text-align: center;
-  border: 1px dashed var(--border);
-  background: var(--surface);
-}
-
-/* ── RUNNING CARD ── */
-.running-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--c, var(--accent));
-  padding: 13px 16px;
-  margin-bottom: 6px;
-  display: flex; align-items: center; gap: 14px;
-  animation: pulse-left 2s ease-in-out infinite;
-}
-@keyframes pulse-left {
-  0%, 100% { border-left-color: var(--c, var(--accent)); }
-  50%       { border-left-color: color-mix(in srgb, var(--c, var(--accent)) 40%, transparent); }
-}
-.running-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--c, var(--accent));
-  flex-shrink: 0;
-  animation: blink 1.4s ease-in-out infinite;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
-}
-.running-name {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 16px; font-weight: 700; font-style: italic;
-  color: var(--c, var(--accent));
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.running-elapsed {
-  font-family: 'Space Mono', monospace;
-  font-size: 20px; font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.05em;
-  min-width: 90px; text-align: right;
-}
-.stop-btn {
-  background: none;
-  border: 1px solid var(--c, var(--accent));
-  color: var(--c, var(--accent));
-  font-family: 'DM Serif Text', Georgia, serif;
-  font-size: 12px; cursor: pointer;
-  padding: 5px 14px;
-  transition: background 0.15s, color 0.15s;
-  white-space: nowrap; flex-shrink: 0;
-}
-.stop-btn:hover { background: rgba(196,134,74,0.12); color: var(--text); }
-
-/* ── ACTIVITIES SECTION ── */
-.activities-section { margin-bottom: 28px; }
+/* ── ACTIVITIES GRID ── */
 .activities-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -201,7 +162,14 @@ body::before {
   transition: background 0.15s;
 }
 .activity-card:hover { background: var(--surf2); }
-.activity-card.is-running { background: rgba(196,134,74,0.04); }
+.activity-card.is-running {
+  background: rgba(196,134,74,0.04);
+  animation: pulse-left 2s ease-in-out infinite;
+}
+@keyframes pulse-left {
+  0%, 100% { border-left-color: var(--c, var(--accent)); }
+  50%       { border-left-color: color-mix(in srgb, var(--c, var(--accent)) 40%, transparent); }
+}
 .activity-top {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
 }
@@ -224,6 +192,13 @@ body::before {
 .activity-total {
   font-family: 'Space Mono', monospace;
   font-size: 14px; font-weight: 700; color: var(--text);
+}
+.activity-elapsed {
+  font-family: 'Space Mono', monospace;
+  font-size: 20px; font-weight: 700;
+  color: var(--c, var(--accent));
+  letter-spacing: 0.04em; line-height: 1;
+  margin: 2px 0;
 }
 .activity-meta { font-size: 11px; color: var(--muted); font-style: italic; }
 .activity-today { font-size: 11px; color: var(--text2); }
@@ -472,7 +447,6 @@ body::before {
   .stats-row { grid-template-columns: 1fr 1fr; }
   .stats-row .stat-card:last-child { grid-column: 1 / -1; }
   .stat-value { font-size: 18px; }
-  .running-elapsed { font-size: 16px; min-width: 72px; }
   .header-add-btn { padding: 6px 12px; font-size: 12px; }
   .dash-summary { grid-template-columns: 1fr 1fr; }
   .dash-summary .stat-card:last-child { grid-column: 1 / -1; }
@@ -490,93 +464,87 @@ body::before {
     </div>
     <button class="header-add-btn" id="btn-add">+ New Activity</button>
   </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="activities">Activities</button>
+    <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+  </div>
 </header>
 
 <main class="main">
 
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Today</div>
-      <div class="stat-value" id="stat-today">0m</div>
-      <div class="stat-sub">total tracked</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">This Week</div>
-      <div class="stat-value" id="stat-week">0m</div>
-      <div class="stat-sub">total tracked</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Now</div>
-      <div class="stat-value" id="stat-active">0</div>
-      <div class="stat-sub">running timers</div>
-    </div>
+  <!-- TAB 1: Activities -->
+  <div class="tab-content active" id="tab-activities">
+    <div class="activities-grid" id="activities-grid"></div>
   </div>
 
-  <section class="dashboard-section">
-    <div class="section-header">
-      <span class="section-title">Analytics</span>
-    </div>
-    <div class="range-controls" id="range-controls">
-      <button class="range-pill" data-preset="today">Today</button>
-      <button class="range-pill active" data-preset="week">This Week</button>
-      <button class="range-pill" data-preset="month">This Month</button>
-      <button class="range-pill" data-preset="last30">Last 30 Days</button>
-      <button class="range-pill" data-preset="custom">Custom</button>
-    </div>
-    <div class="custom-range" id="custom-range">
-      <input class="date-input" type="date" id="dash-from">
-      <span class="range-sep">→</span>
-      <input class="date-input" type="date" id="dash-to">
-    </div>
-    <div class="dash-summary">
+  <!-- TAB 2: Dashboard -->
+  <div class="tab-content" id="tab-dashboard">
+
+    <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Total Time</div>
-        <div class="stat-value" id="dash-total">0m</div>
-        <div class="stat-sub">in range</div>
+        <div class="stat-label">Today</div>
+        <div class="stat-value" id="stat-today">0m</div>
+        <div class="stat-sub">total tracked</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Sessions</div>
-        <div class="stat-value" id="dash-sessions">0</div>
-        <div class="stat-sub">completed</div>
+        <div class="stat-label">This Week</div>
+        <div class="stat-value" id="stat-week">0m</div>
+        <div class="stat-sub">total tracked</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Top Activity</div>
-        <div class="dash-top-val" id="dash-top">—</div>
-        <div class="stat-sub" id="dash-top-time"></div>
+        <div class="stat-label">Active Now</div>
+        <div class="stat-value" id="stat-active">0</div>
+        <div class="stat-sub">running timers</div>
       </div>
     </div>
-    <div id="dash-dist"></div>
-  </section>
 
-  <hr class="divider">
+    <section class="dashboard-section">
+      <div class="section-header">
+        <span class="section-title">Analytics</span>
+      </div>
+      <div class="range-controls" id="range-controls">
+        <button class="range-pill" data-preset="today">Today</button>
+        <button class="range-pill active" data-preset="week">This Week</button>
+        <button class="range-pill" data-preset="month">This Month</button>
+        <button class="range-pill" data-preset="last30">Last 30 Days</button>
+        <button class="range-pill" data-preset="custom">Custom</button>
+      </div>
+      <div class="custom-range" id="custom-range">
+        <input class="date-input" type="date" id="dash-from">
+        <span class="range-sep">→</span>
+        <input class="date-input" type="date" id="dash-to">
+      </div>
+      <div class="dash-summary">
+        <div class="stat-card">
+          <div class="stat-label">Total Time</div>
+          <div class="stat-value" id="dash-total">0m</div>
+          <div class="stat-sub">in range</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Sessions</div>
+          <div class="stat-value" id="dash-sessions">0</div>
+          <div class="stat-sub">completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Top Activity</div>
+          <div class="dash-top-val" id="dash-top">—</div>
+          <div class="stat-sub" id="dash-top-time"></div>
+        </div>
+      </div>
+      <div id="dash-dist"></div>
+    </section>
 
-  <section class="running-section">
-    <div class="section-header">
-      <span class="section-title">Currently Running</span>
-      <span class="section-badge" id="running-badge">0</span>
-    </div>
-    <div id="running-list"></div>
-  </section>
+    <hr class="divider">
 
-  <hr class="divider">
+    <section>
+      <div class="section-header">
+        <span class="section-title">Recent Sessions</span>
+        <span class="section-badge" id="history-badge">0</span>
+      </div>
+      <div class="history-list" id="history-list"></div>
+    </section>
 
-  <section class="activities-section">
-    <div class="section-header">
-      <span class="section-title">Activities</span>
-      <span class="section-badge" id="activities-badge">0</span>
-    </div>
-    <div class="activities-grid" id="activities-grid"></div>
-  </section>
-
-  <hr class="divider">
-
-  <section>
-    <div class="section-header">
-      <span class="section-title">Recent Sessions</span>
-      <span class="section-badge" id="history-badge">0</span>
-    </div>
-    <div class="history-list" id="history-list"></div>
-  </section>
+  </div><!-- /tab-dashboard -->
 
 </main>
 
@@ -642,7 +610,6 @@ function load() {
 function save(d) {
   const s = JSON.stringify(d);
   localStorage.setItem(SK, s);
-  // keep snapshot in sync so the poll ignores our own writes
   if (typeof _syncSnapshot !== 'undefined') _syncSnapshot = s;
 }
 
@@ -847,54 +814,20 @@ function render() {
   document.getElementById('header-sub').textContent  =
     active > 0 ? active + ' timer' + (active > 1 ? 's' : '') + ' running' : 'Track time across your activities';
 
-  renderRunning(d, now);
   renderActivities(d, now);
   renderHistory(d);
   renderDashboard(d);
 }
 
-function renderRunning(d, now) {
-  const el  = document.getElementById('running-list');
-  const ids = Object.keys(d.running || {});
-  document.getElementById('running-badge').textContent = ids.length;
-  el.innerHTML = '';
-
-  if (!ids.length) {
-    el.innerHTML = '<div class="running-empty">No timers running — start an activity below</div>';
-    return;
-  }
-
-  for (const id of ids) {
-    const act = d.activities.find(a => a.id === id);
-    if (!act) continue;
-    const start   = d.running[id];
-    const elapsed = now - start;
-
-    const card = document.createElement('div');
-    card.className = 'running-card';
-    card.style.setProperty('--c', act.color);
-
-    card.innerHTML =
-      '<div class="running-dot"></div>' +
-      '<div class="running-name">' + esc(act.name) + '</div>' +
-      '<div class="running-elapsed" data-elapsed="' + id + '">' + fmtTimer(elapsed) + '</div>' +
-      '<button class="stop-btn" data-id="' + id + '">Stop</button>';
-
-    card.querySelector('.stop-btn').addEventListener('click', () => stopTimer(id));
-    el.appendChild(card);
-  }
-}
-
 function renderActivities(d, now) {
   const grid = document.getElementById('activities-grid');
   grid.innerHTML = '';
-  document.getElementById('activities-badge').textContent = d.activities.length;
 
   if (!d.activities.length) {
     grid.innerHTML =
       '<div class="empty-state">' +
       'No activities yet' +
-      '<div class="empty-hint">Click “+ New Activity” to get started</div>' +
+      '<div class="empty-hint">Click "+ New Activity" to get started</div>' +
       '</div>';
     return;
   }
@@ -907,21 +840,35 @@ function renderActivities(d, now) {
     card.className = 'activity-card' + (running ? ' is-running' : '');
     card.style.setProperty('--c', act.color);
 
-    card.innerHTML =
-      '<div class="activity-top">' +
-        '<div class="activity-name">' + esc(act.name) + '</div>' +
-        '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
-      '</div>' +
-      '<div class="activity-stats">' +
-        '<div class="activity-total">' + fmt(total) + '</div>' +
-        '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + '</div>' +
-        (todayTotal > 0 ? '<div class="activity-today">' + fmt(todayTotal) + ' today</div>' : '') +
-      '</div>' +
-      '<div class="activity-actions">' +
-        '<button class="start-btn' + (running ? ' is-running' : '') + '" data-id="' + act.id + '">' +
-          (running ? '⏸ Stop' : '▶ Start') +
-        '</button>' +
-      '</div>';
+    if (running) {
+      const elapsed = now - (d.running[act.id] || now);
+      card.innerHTML =
+        '<div class="activity-top">' +
+          '<div class="activity-name">' + esc(act.name) + '</div>' +
+          '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
+        '</div>' +
+        '<div class="activity-stats">' +
+          '<div class="activity-elapsed" data-elapsed="' + act.id + '">' + fmtTimer(elapsed) + '</div>' +
+          (count > 0 ? '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + ' logged</div>' : '') +
+        '</div>' +
+        '<div class="activity-actions">' +
+          '<button class="start-btn is-running" data-id="' + act.id + '">⏸ Stop</button>' +
+        '</div>';
+    } else {
+      card.innerHTML =
+        '<div class="activity-top">' +
+          '<div class="activity-name">' + esc(act.name) + '</div>' +
+          '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
+        '</div>' +
+        '<div class="activity-stats">' +
+          '<div class="activity-total">' + fmt(total) + '</div>' +
+          '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + '</div>' +
+          (todayTotal > 0 ? '<div class="activity-today">' + fmt(todayTotal) + ' today</div>' : '') +
+        '</div>' +
+        '<div class="activity-actions">' +
+          '<button class="start-btn" data-id="' + act.id + '">▶ Start</button>' +
+        '</div>';
+    }
 
     card.querySelector('.activity-delete').addEventListener('click', () => openDelModal(act.id, act.name, count));
     card.querySelector('.start-btn').addEventListener('click', () => running ? stopTimer(act.id) : startTimer(act.id));
@@ -937,7 +884,7 @@ function renderHistory(d) {
   document.getElementById('history-badge').textContent = d.sessions.length;
 
   if (!sessions.length) {
-    el.innerHTML = '<div class="running-empty">No completed sessions yet</div>';
+    el.innerHTML = '<div class="dist-empty">No completed sessions yet</div>';
     return;
   }
 
@@ -998,6 +945,17 @@ function ensureTick() {
   }, 1000);
 }
 
+// ── Tab switching ────────────────────────────────────
+
+document.querySelector('.tab-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + tab));
+  if (tab === 'dashboard') renderDashboard(load());
+});
+
 // ── Add modal ────────────────────────────────────────
 
 function openAddModal() {
@@ -1049,7 +1007,7 @@ document.getElementById('act-name').addEventListener('keydown', e => {
 function openDelModal(id, name, sessCount) {
   pendingDelId = id;
   document.getElementById('del-text').textContent =
-    'Delete “' + name + '”? This will also remove ' + sessCount +
+    'Delete "' + name + '"? This will also remove ' + sessCount +
     ' session' + (sessCount !== 1 ? 's' : '') + '. This cannot be undone.';
   document.getElementById('del-overlay').classList.add('open');
 }
@@ -1139,11 +1097,7 @@ function _applyExternalUpdate() {
   else if (tickId) { clearInterval(tickId); tickId = null; }
 }
 
-// Fires immediately in every other tab/window when localStorage changes
 window.addEventListener('storage', e => { if (e.key === SK) _applyExternalUpdate(); });
-
-// Fallback poll every 5 s — catches same-origin iframes, edge cases, and
-// any browser that doesn't fire the storage event reliably
 setInterval(_applyExternalUpdate, 5000);
 </script>
 </body>
