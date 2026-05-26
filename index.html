@@ -640,7 +640,10 @@ function load() {
 }
 
 function save(d) {
-  localStorage.setItem(SK, JSON.stringify(d));
+  const s = JSON.stringify(d);
+  localStorage.setItem(SK, s);
+  // keep snapshot in sync so the poll ignores our own writes
+  if (typeof _syncSnapshot !== 'undefined') _syncSnapshot = s;
 }
 
 function uid() {
@@ -1121,6 +1124,27 @@ function toast(msg) {
 render();
 const initData = load();
 if (Object.keys(initData.running || {}).length) ensureTick();
+
+// ── Cross-tab / multi-browser sync ───────────────────
+
+let _syncSnapshot = localStorage.getItem(SK);
+
+function _applyExternalUpdate() {
+  const current = localStorage.getItem(SK);
+  if (current === _syncSnapshot) return;
+  _syncSnapshot = current;
+  render();
+  const d = load();
+  if (Object.keys(d.running || {}).length) ensureTick();
+  else if (tickId) { clearInterval(tickId); tickId = null; }
+}
+
+// Fires immediately in every other tab/window when localStorage changes
+window.addEventListener('storage', e => { if (e.key === SK) _applyExternalUpdate(); });
+
+// Fallback poll every 5 s — catches same-origin iframes, edge cases, and
+// any browser that doesn't fire the storage event reliably
+setInterval(_applyExternalUpdate, 5000);
 </script>
 </body>
 </html>
