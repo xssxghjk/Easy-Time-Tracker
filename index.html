@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Easy Time Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=DM+Serif+Text:ital@0;1&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #1c1814;
+  --surface: #252018;
+  --surf2:   #2e2820;
+  --border:  #3a3025;
+  --bord2:   #4a4030;
+  --accent:  #c4864a;
+  --text:    #e8dfd0;
+  --text2:   #9a8a76;
+  --muted:   #7a6e60;
+  --muted2:  #5a5040;
+  --green:   #4ec994;
+  --red:     #e87878;
+}
+html { overflow-x: hidden; }
+body {
+  font-family: 'DM Serif Text', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.55;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle, rgba(232,223,208,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── HEADER ── */
+.app-header {
+  background: var(--surface);
+  border-bottom: 2px solid var(--accent);
+  padding: 14px 20px 0;
+  position: sticky; top: 0; z-index: 100;
+  overflow: hidden;
+}
+.header-inner {
+  max-width: 900px; margin: 0 auto;
+  padding-bottom: 12px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px;
+}
+.app-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px; font-weight: 700; font-style: italic;
+}
+.app-title span { color: var(--accent); }
+.header-sub {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.12em; text-transform: uppercase;
+  font-style: italic; margin-top: 2px;
+}
+.header-add-btn {
+  background: var(--accent); border: none;
+  color: #1c1814;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 13px; cursor: pointer;
+  padding: 7px 18px;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.header-add-btn:hover { opacity: 0.85; }
+
+/* ── MAIN ── */
+.main {
+  max-width: 900px; margin: 0 auto;
+  padding: 24px 16px 60px;
+  position: relative; z-index: 1;
+}
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+}
+.stat-label {
+  font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted);
+  font-style: italic; margin-bottom: 5px;
+}
+.stat-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px; font-weight: 700;
+  color: var(--text); line-height: 1;
+}
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 16px; font-weight: 700; font-style: italic;
+}
+.section-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; color: var(--muted2);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 2px 9px; border-radius: 999px;
+}
+
+/* ── RUNNING SECTION ── */
+.running-section { margin-bottom: 28px; }
+.running-empty {
+  font-size: 13px; color: var(--muted2); font-style: italic;
+  padding: 18px 16px; text-align: center;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+}
+
+/* ── RUNNING CARD ── */
+.running-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c, var(--accent));
+  padding: 13px 16px;
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 14px;
+  animation: pulse-left 2s ease-in-out infinite;
+}
+@keyframes pulse-left {
+  0%, 100% { border-left-color: var(--c, var(--accent)); }
+  50%       { border-left-color: color-mix(in srgb, var(--c, var(--accent)) 40%, transparent); }
+}
+.running-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c, var(--accent));
+  flex-shrink: 0;
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.running-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 16px; font-weight: 700; font-style: italic;
+  color: var(--c, var(--accent));
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.running-elapsed {
+  font-family: 'Space Mono', monospace;
+  font-size: 20px; font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.05em;
+  min-width: 90px; text-align: right;
+}
+.stop-btn {
+  background: none;
+  border: 1px solid var(--c, var(--accent));
+  color: var(--c, var(--accent));
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 12px; cursor: pointer;
+  padding: 5px 14px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.stop-btn:hover { background: rgba(196,134,74,0.12); color: var(--text); }
+
+/* ── ACTIVITIES SECTION ── */
+.activities-section { margin-bottom: 28px; }
+.activities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+/* ── ACTIVITY CARD ── */
+.activity-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c, var(--accent));
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: background 0.15s;
+}
+.activity-card:hover { background: var(--surf2); }
+.activity-card.is-running { background: rgba(196,134,74,0.04); }
+.activity-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+.activity-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 17px; font-weight: 700; font-style: italic;
+  color: var(--c, var(--accent));
+  line-height: 1.2; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.activity-delete {
+  background: none; border: none;
+  color: var(--muted2); font-size: 18px;
+  cursor: pointer; padding: 0 2px;
+  transition: color 0.15s; line-height: 1;
+  flex-shrink: 0; margin-top: -1px;
+}
+.activity-delete:hover { color: var(--red); }
+.activity-stats { display: flex; flex-direction: column; gap: 3px; }
+.activity-total {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.activity-meta { font-size: 11px; color: var(--muted); font-style: italic; }
+.activity-today { font-size: 11px; color: var(--text2); }
+.activity-actions {
+  display: flex; align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.start-btn {
+  background: var(--c, var(--accent));
+  border: none; color: #1c1814;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 12px; cursor: pointer;
+  padding: 6px 0; width: 100%;
+  transition: opacity 0.15s;
+  letter-spacing: 0.03em;
+}
+.start-btn:hover { opacity: 0.85; }
+.start-btn.is-running {
+  background: none;
+  border: 1px solid var(--c, var(--accent));
+  color: var(--c, var(--accent));
+}
+.start-btn.is-running:hover { background: rgba(196,134,74,0.1); }
+
+/* ── EMPTY STATES ── */
+.empty-state {
+  font-size: 13px; color: var(--muted2); font-style: italic;
+  padding: 28px 16px; text-align: center;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  grid-column: 1 / -1;
+}
+.empty-hint { font-size: 11px; color: var(--muted2); margin-top: 5px; }
+
+/* ── HISTORY SECTION ── */
+.history-list { display: flex; flex-direction: column; gap: 3px; }
+.history-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.history-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.history-name {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 14px; font-style: italic;
+  color: var(--text2); flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.history-duration {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  color: var(--text); min-width: 58px; text-align: right;
+}
+.history-time {
+  font-size: 11px; color: var(--muted2);
+  min-width: 68px; text-align: right;
+}
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0 0 24px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(28,24,20,0.88);
+  z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--bord2);
+  border-top: 3px solid var(--accent);
+  padding: 22px 24px 20px;
+  min-width: 280px; max-width: 380px; width: 100%;
+  transform: translateY(8px);
+  transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 20px; font-weight: 700; font-style: italic;
+  margin-bottom: 16px;
+}
+.modal-label {
+  font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--muted);
+  font-style: italic; margin-bottom: 6px;
+}
+.modal-input {
+  width: 100%;
+  background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 10px;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 14px; margin-bottom: 16px;
+}
+.modal-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.modal-input::placeholder { color: var(--muted2); font-style: italic; }
+.color-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.color-swatch:hover { transform: scale(1.12); }
+.color-swatch.selected { border-color: var(--text); }
+.modal-actions { display: flex; gap: 8px; }
+.btn-primary {
+  background: var(--accent); border: none;
+  color: #1c1814; padding: 8px 0;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 13px; cursor: pointer;
+  transition: opacity 0.15s; flex: 1;
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-secondary {
+  background: none; border: 1px solid var(--border);
+  color: var(--text2); padding: 8px 16px;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 13px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-secondary:hover { border-color: var(--text2); color: var(--text); }
+.btn-danger {
+  background: var(--red); border: none;
+  color: #fff; padding: 8px 0;
+  font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 13px; cursor: pointer;
+  transition: opacity 0.15s; flex: 1;
+}
+.btn-danger:hover { opacity: 0.85; }
+.confirm-text {
+  font-size: 13px; color: var(--text2);
+  margin-bottom: 18px; line-height: 1.6;
+}
+
+/* ── FOOTER ── */
+.app-footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  text-align: center; font-size: 11px; color: var(--muted2);
+  position: relative; z-index: 1;
+}
+.app-footer a {
+  color: var(--muted); text-decoration: none;
+  border-bottom: 1px solid var(--border); margin-left: 0.5rem;
+  transition: color 0.15s;
+}
+.app-footer a:hover { color: var(--text); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: var(--surface); border: 1px solid var(--bord2);
+  border-left: 3px solid var(--accent);
+  padding: 10px 16px; font-size: 13px; color: var(--text);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; max-width: 260px;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .stats-row .stat-card:last-child { grid-column: 1 / -1; }
+  .stat-value { font-size: 18px; }
+  .running-elapsed { font-size: 16px; min-width: 72px; }
+  .header-add-btn { padding: 6px 12px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div>
+      <h1 class="app-title">Easy <span>Time</span> Tracker</h1>
+      <div class="header-sub" id="header-sub">Track time across your activities</div>
+    </div>
+    <button class="header-add-btn" id="btn-add">+ New Activity</button>
+  </div>
+</header>
+
+<main class="main">
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Today</div>
+      <div class="stat-value" id="stat-today">0m</div>
+      <div class="stat-sub">total tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">This Week</div>
+      <div class="stat-value" id="stat-week">0m</div>
+      <div class="stat-sub">total tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Now</div>
+      <div class="stat-value" id="stat-active">0</div>
+      <div class="stat-sub">running timers</div>
+    </div>
+  </div>
+
+  <section class="running-section">
+    <div class="section-header">
+      <span class="section-title">Currently Running</span>
+      <span class="section-badge" id="running-badge">0</span>
+    </div>
+    <div id="running-list"></div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="activities-section">
+    <div class="section-header">
+      <span class="section-title">Activities</span>
+      <span class="section-badge" id="activities-badge">0</span>
+    </div>
+    <div class="activities-grid" id="activities-grid"></div>
+  </section>
+
+  <hr class="divider">
+
+  <section>
+    <div class="section-header">
+      <span class="section-title">Recent Sessions</span>
+      <span class="section-badge" id="history-badge">0</span>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  All data is stored locally in your browser &mdash; nothing is sent to a server.
+  <a href="https://github.com/xssxghjk/easy-time-tracker" target="_blank" rel="noopener">View on GitHub</a>
+</footer>
+
+<div id="toast"></div>
+
+<!-- Add Activity Modal -->
+<div class="modal-overlay" id="add-overlay">
+  <div class="modal">
+    <div class="modal-title">New Activity</div>
+    <div class="modal-label">Name</div>
+    <input class="modal-input" id="act-name" type="text" placeholder="e.g. Deep Work, Reading, Exercise…" maxlength="50" autocomplete="off">
+    <div class="modal-label">Color</div>
+    <div class="color-row" id="color-row"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="btn-create">Create</button>
+      <button class="btn-secondary" id="btn-add-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="del-overlay">
+  <div class="modal">
+    <div class="modal-title">Delete Activity</div>
+    <div class="confirm-text" id="del-text"></div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="btn-del-confirm">Delete</button>
+      <button class="btn-secondary" id="btn-del-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const SK = 'easy_time_tracker_v1';
+
+const COLORS = [
+  '#c4864a','#4ec994','#7a9de8','#e87878',
+  '#d4a0d8','#e8c47a','#78c8d8','#e8a078',
+  '#94b87c','#c87aaa'
+];
+
+let pickedColor = COLORS[0];
+let pendingDelId = null;
+let tickId = null;
+
+// ── Data ────────────────────────────────────────────
+
+function load() {
+  try {
+    const r = localStorage.getItem(SK);
+    if (r) return JSON.parse(r);
+  } catch {}
+  return { activities: [], sessions: [], running: {} };
+}
+
+function save(d) {
+  localStorage.setItem(SK, JSON.stringify(d));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+// ── Time utils ──────────────────────────────────────
+
+function fmt(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return h + 'h ' + m + 'm';
+  if (m > 0) return m + 'm ' + ss + 's';
+  return ss + 's';
+}
+
+function fmtTimer(ms) {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  return (h > 0 ? pad(h) + ':' : '') + pad(m) + ':' + pad(ss);
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function fmtAgo(ts) {
+  const d = Date.now() - ts;
+  const m = Math.floor(d / 60000);
+  const h = Math.floor(m / 60);
+  if (h > 0) return h + 'h ago';
+  if (m > 0) return m + 'm ago';
+  return 'just now';
+}
+
+function todayStart() {
+  const d = new Date(); d.setHours(0,0,0,0); return d.getTime();
+}
+function weekStart() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+}
+
+// ── Stats ────────────────────────────────────────────
+
+function globalStats(d) {
+  const now = Date.now();
+  const td = todayStart(), wk = weekStart();
+  let todayMs = 0, weekMs = 0;
+
+  for (const s of d.sessions) {
+    if (s.endedAt >= td) todayMs += s.duration;
+    if (s.endedAt >= wk) weekMs  += s.duration;
+  }
+  for (const [, start] of Object.entries(d.running || {})) {
+    const el = now - start;
+    todayMs += (start >= td ? el : now - td);
+    weekMs  += (start >= wk ? el : now - wk);
+  }
+  return { todayMs, weekMs, active: Object.keys(d.running || {}).length };
+}
+
+function actStats(d, id) {
+  const now = Date.now();
+  const td = todayStart();
+  let total = 0, todayTotal = 0, count = 0;
+  for (const s of d.sessions) {
+    if (s.activityId !== id) continue;
+    total += s.duration;
+    count++;
+    if (s.endedAt >= td) todayTotal += s.duration;
+  }
+  const rs = d.running?.[id];
+  if (rs !== undefined) {
+    const el = now - rs;
+    total      += el;
+    todayTotal += el;
+  }
+  return { total, todayTotal, count };
+}
+
+// ── Render ──────────────────────────────────────────
+
+function render() {
+  const d   = load();
+  const now = Date.now();
+  const { todayMs, weekMs, active } = globalStats(d);
+
+  document.getElementById('stat-today').textContent  = fmt(todayMs);
+  document.getElementById('stat-week').textContent   = fmt(weekMs);
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('header-sub').textContent  =
+    active > 0 ? active + ' timer' + (active > 1 ? 's' : '') + ' running' : 'Track time across your activities';
+
+  renderRunning(d, now);
+  renderActivities(d, now);
+  renderHistory(d);
+}
+
+function renderRunning(d, now) {
+  const el  = document.getElementById('running-list');
+  const ids = Object.keys(d.running || {});
+  document.getElementById('running-badge').textContent = ids.length;
+  el.innerHTML = '';
+
+  if (!ids.length) {
+    el.innerHTML = '<div class="running-empty">No timers running — start an activity below</div>';
+    return;
+  }
+
+  for (const id of ids) {
+    const act = d.activities.find(a => a.id === id);
+    if (!act) continue;
+    const start   = d.running[id];
+    const elapsed = now - start;
+
+    const card = document.createElement('div');
+    card.className = 'running-card';
+    card.style.setProperty('--c', act.color);
+
+    card.innerHTML =
+      '<div class="running-dot"></div>' +
+      '<div class="running-name">' + esc(act.name) + '</div>' +
+      '<div class="running-elapsed" data-elapsed="' + id + '">' + fmtTimer(elapsed) + '</div>' +
+      '<button class="stop-btn" data-id="' + id + '">Stop</button>';
+
+    card.querySelector('.stop-btn').addEventListener('click', () => stopTimer(id));
+    el.appendChild(card);
+  }
+}
+
+function renderActivities(d, now) {
+  const grid = document.getElementById('activities-grid');
+  grid.innerHTML = '';
+  document.getElementById('activities-badge').textContent = d.activities.length;
+
+  if (!d.activities.length) {
+    grid.innerHTML =
+      '<div class="empty-state">' +
+      'No activities yet' +
+      '<div class="empty-hint">Click “+ New Activity” to get started</div>' +
+      '</div>';
+    return;
+  }
+
+  for (const act of d.activities) {
+    const running = act.id in (d.running || {});
+    const { total, todayTotal, count } = actStats(d, act.id);
+
+    const card = document.createElement('div');
+    card.className = 'activity-card' + (running ? ' is-running' : '');
+    card.style.setProperty('--c', act.color);
+
+    card.innerHTML =
+      '<div class="activity-top">' +
+        '<div class="activity-name">' + esc(act.name) + '</div>' +
+        '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
+      '</div>' +
+      '<div class="activity-stats">' +
+        '<div class="activity-total">' + fmt(total) + '</div>' +
+        '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + '</div>' +
+        (todayTotal > 0 ? '<div class="activity-today">' + fmt(todayTotal) + ' today</div>' : '') +
+      '</div>' +
+      '<div class="activity-actions">' +
+        '<button class="start-btn' + (running ? ' is-running' : '') + '" data-id="' + act.id + '">' +
+          (running ? '⏸ Stop' : '▶ Start') +
+        '</button>' +
+      '</div>';
+
+    card.querySelector('.activity-delete').addEventListener('click', () => openDelModal(act.id, act.name, count));
+    card.querySelector('.start-btn').addEventListener('click', () => running ? stopTimer(act.id) : startTimer(act.id));
+    grid.appendChild(card);
+  }
+}
+
+function renderHistory(d) {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '';
+
+  const sessions = [...d.sessions].sort((a,b) => b.endedAt - a.endedAt).slice(0, 30);
+  document.getElementById('history-badge').textContent = d.sessions.length;
+
+  if (!sessions.length) {
+    el.innerHTML = '<div class="running-empty">No completed sessions yet</div>';
+    return;
+  }
+
+  for (const s of sessions) {
+    const act  = d.activities.find(a => a.id === s.activityId);
+    const name  = act ? act.name : 'Deleted Activity';
+    const color = act ? act.color : '#7a6e60';
+
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    row.innerHTML =
+      '<div class="history-dot" style="background:' + color + '"></div>' +
+      '<div class="history-name">' + esc(name) + '</div>' +
+      '<div class="history-duration">' + fmt(s.duration) + '</div>' +
+      '<div class="history-time">' + fmtAgo(s.endedAt) + '</div>';
+    el.appendChild(row);
+  }
+}
+
+// ── Timer ops ────────────────────────────────────────
+
+function startTimer(id) {
+  const d = load();
+  if (!d.running) d.running = {};
+  d.running[id] = Date.now();
+  save(d);
+  toast('Timer started');
+  render();
+  ensureTick();
+}
+
+function stopTimer(id) {
+  const d = load();
+  const start = d.running?.[id];
+  if (start === undefined) return;
+  const duration = Date.now() - start;
+  delete d.running[id];
+  d.sessions.push({ id: uid(), activityId: id, startedAt: start, endedAt: Date.now(), duration });
+  save(d);
+  toast('Logged — ' + fmt(duration));
+  render();
+  if (!Object.keys(d.running || {}).length) { clearInterval(tickId); tickId = null; }
+}
+
+function ensureTick() {
+  if (tickId) return;
+  tickId = setInterval(() => {
+    const d   = load();
+    const now = Date.now();
+    document.querySelectorAll('[data-elapsed]').forEach(el => {
+      const start = d.running?.[el.dataset.elapsed];
+      if (start !== undefined) el.textContent = fmtTimer(now - start);
+    });
+    const { todayMs, weekMs, active } = globalStats(d);
+    document.getElementById('stat-today').textContent  = fmt(todayMs);
+    document.getElementById('stat-week').textContent   = fmt(weekMs);
+    document.getElementById('stat-active').textContent = active;
+  }, 1000);
+}
+
+// ── Add modal ────────────────────────────────────────
+
+function openAddModal() {
+  pickedColor = COLORS[0];
+  document.getElementById('act-name').value = '';
+  const row = document.getElementById('color-row');
+  row.innerHTML = '';
+  COLORS.forEach((c, i) => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (i === 0 ? ' selected' : '');
+    sw.style.background = c;
+    sw.addEventListener('click', () => {
+      row.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      pickedColor = c;
+    });
+    row.appendChild(sw);
+  });
+  document.getElementById('add-overlay').classList.add('open');
+  document.getElementById('act-name').focus();
+}
+
+function closeAddModal() {
+  document.getElementById('add-overlay').classList.remove('open');
+}
+
+document.getElementById('btn-add').addEventListener('click', openAddModal);
+document.getElementById('btn-add-cancel').addEventListener('click', closeAddModal);
+document.getElementById('add-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddModal(); });
+
+document.getElementById('btn-create').addEventListener('click', () => {
+  const name = document.getElementById('act-name').value.trim();
+  if (!name) { document.getElementById('act-name').focus(); return; }
+  const d = load();
+  d.activities.push({ id: uid(), name, color: pickedColor, createdAt: Date.now() });
+  save(d);
+  closeAddModal();
+  toast('Activity created');
+  render();
+});
+
+document.getElementById('act-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  document.getElementById('btn-create').click();
+  if (e.key === 'Escape') closeAddModal();
+});
+
+// ── Delete modal ─────────────────────────────────────
+
+function openDelModal(id, name, sessCount) {
+  pendingDelId = id;
+  document.getElementById('del-text').textContent =
+    'Delete “' + name + '”? This will also remove ' + sessCount +
+    ' session' + (sessCount !== 1 ? 's' : '') + '. This cannot be undone.';
+  document.getElementById('del-overlay').classList.add('open');
+}
+
+function closeDelModal() {
+  pendingDelId = null;
+  document.getElementById('del-overlay').classList.remove('open');
+}
+
+document.getElementById('btn-del-cancel').addEventListener('click', closeDelModal);
+document.getElementById('del-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDelModal(); });
+
+document.getElementById('btn-del-confirm').addEventListener('click', () => {
+  if (!pendingDelId) return;
+  const d = load();
+  if (d.running?.[pendingDelId]) delete d.running[pendingDelId];
+  d.activities = d.activities.filter(a => a.id !== pendingDelId);
+  d.sessions   = d.sessions.filter(s => s.activityId !== pendingDelId);
+  save(d);
+  closeDelModal();
+  toast('Activity deleted');
+  render();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAddModal(); closeDelModal(); }
+});
+
+// ── Security ─────────────────────────────────────────
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Toast ─────────────────────────────────────────────
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+// ── Init ─────────────────────────────────────────────
+
+render();
+const initData = load();
+if (Object.keys(initData.running || {}).length) ensureTick();
+</script>
+</body>
+</html>
