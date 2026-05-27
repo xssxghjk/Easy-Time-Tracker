@@ -212,7 +212,7 @@ body::before {
   border: none; color: #1c1814;
   font-family: 'DM Serif Text', Georgia, serif;
   font-size: 12px; cursor: pointer;
-  padding: 6px 0; width: 100%;
+  padding: 6px 0; flex: 1;
   transition: opacity 0.15s;
   letter-spacing: 0.03em;
 }
@@ -223,6 +223,60 @@ body::before {
   color: var(--c, var(--accent));
 }
 .start-btn.is-running:hover { background: rgba(196,134,74,0.1); }
+
+/* ── ACTIVITY EDIT / SESSION BTN ── */
+.activity-btns { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.activity-edit {
+  background: none; border: none;
+  color: var(--muted2); font-size: 13px;
+  cursor: pointer; padding: 0 3px;
+  transition: color 0.15s; line-height: 1;
+}
+.activity-edit:hover { color: var(--text2); }
+.add-session-btn {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'DM Serif Text', Georgia, serif;
+  font-size: 11px; cursor: pointer; padding: 5px 9px;
+  transition: border-color 0.15s, color 0.15s; flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+.add-session-btn:hover { border-color: var(--bord2); color: var(--text2); }
+
+/* ── SESSION MODAL EXTRAS ── */
+.modal-datetime {
+  width: 100%;
+  background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px; margin-bottom: 16px;
+  color-scheme: dark;
+}
+.modal-datetime:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.session-preview {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px; color: var(--text2);
+  margin-bottom: 16px; padding: 6px 10px;
+  background: var(--surf2); border: 1px solid var(--border);
+  min-height: 34px; line-height: 1.6;
+}
+.session-act-label {
+  font-size: 13px; color: var(--text2); font-style: italic;
+  margin-bottom: 14px;
+}
+
+/* ── HISTORY ROW ACTIONS ── */
+.history-acts {
+  display: flex; gap: 2px;
+  opacity: 0; transition: opacity 0.15s; flex-shrink: 0;
+}
+.history-row:hover .history-acts { opacity: 1; }
+.history-act-btn {
+  background: none; border: none;
+  color: var(--muted2); font-size: 13px; cursor: pointer;
+  padding: 0 4px; transition: color 0.15s; line-height: 1;
+}
+.history-act-btn:hover { color: var(--text2); }
+.history-act-btn.del:hover { color: var(--red); }
 
 /* ── EMPTY STATES ── */
 .empty-state {
@@ -582,6 +636,38 @@ body::before {
   </div>
 </div>
 
+<!-- Edit Activity Modal -->
+<div class="modal-overlay" id="edit-overlay">
+  <div class="modal">
+    <div class="modal-title">Edit Activity</div>
+    <div class="modal-label">Name</div>
+    <input class="modal-input" id="edit-name" type="text" placeholder="Activity name" maxlength="50" autocomplete="off">
+    <div class="modal-label">Color</div>
+    <div class="color-row" id="edit-color-row"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="btn-edit-save">Save</button>
+      <button class="btn-secondary" id="btn-edit-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add / Edit Session Modal -->
+<div class="modal-overlay" id="session-overlay">
+  <div class="modal">
+    <div class="modal-title" id="session-title">Add Session</div>
+    <div class="session-act-label" id="session-act-label"></div>
+    <div class="modal-label">Start</div>
+    <input class="modal-datetime" id="session-start" type="datetime-local">
+    <div class="modal-label">End</div>
+    <input class="modal-datetime" id="session-end" type="datetime-local">
+    <div class="session-preview" id="session-preview">—</div>
+    <div class="modal-actions" id="session-actions">
+      <button class="btn-primary" id="btn-session-save">Save</button>
+      <button class="btn-secondary" id="btn-session-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 const SK = 'easy_time_tracker_v1';
@@ -596,6 +682,10 @@ let pickedColor = COLORS[0];
 let pendingDelId = null;
 let tickId = null;
 let dashPreset = 'week';
+let pendingEditId = null;
+let editPickedColor = COLORS[0];
+let pendingSessionActId = null;
+let pendingSessionId = null;
 
 // ── Data ────────────────────────────────────────────
 
@@ -640,6 +730,12 @@ function fmtTimer(ms) {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+function toDatetimeLocal(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
 
 function fmtAgo(ts) {
   const d = Date.now() - ts;
@@ -840,38 +936,37 @@ function renderActivities(d, now) {
     card.className = 'activity-card' + (running ? ' is-running' : '');
     card.style.setProperty('--c', act.color);
 
+    let statsHtml;
     if (running) {
       const elapsed = now - (d.running[act.id] || now);
-      card.innerHTML =
-        '<div class="activity-top">' +
-          '<div class="activity-name">' + esc(act.name) + '</div>' +
-          '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
-        '</div>' +
-        '<div class="activity-stats">' +
-          '<div class="activity-elapsed" data-elapsed="' + act.id + '">' + fmtTimer(elapsed) + '</div>' +
-          (count > 0 ? '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + ' logged</div>' : '') +
-        '</div>' +
-        '<div class="activity-actions">' +
-          '<button class="start-btn is-running" data-id="' + act.id + '">⏸ Stop</button>' +
-        '</div>';
+      statsHtml =
+        '<div class="activity-elapsed" data-elapsed="' + act.id + '">' + fmtTimer(elapsed) + '</div>' +
+        (count > 0 ? '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + ' logged</div>' : '');
     } else {
-      card.innerHTML =
-        '<div class="activity-top">' +
-          '<div class="activity-name">' + esc(act.name) + '</div>' +
-          '<button class="activity-delete" data-id="' + act.id + '" title="Delete">&times;</button>' +
-        '</div>' +
-        '<div class="activity-stats">' +
-          '<div class="activity-total">' + fmt(total) + '</div>' +
-          '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + '</div>' +
-          (todayTotal > 0 ? '<div class="activity-today">' + fmt(todayTotal) + ' today</div>' : '') +
-        '</div>' +
-        '<div class="activity-actions">' +
-          '<button class="start-btn" data-id="' + act.id + '">▶ Start</button>' +
-        '</div>';
+      statsHtml =
+        '<div class="activity-total">' + fmt(total) + '</div>' +
+        '<div class="activity-meta">' + count + ' session' + (count !== 1 ? 's' : '') + '</div>' +
+        (todayTotal > 0 ? '<div class="activity-today">' + fmt(todayTotal) + ' today</div>' : '');
     }
 
+    card.innerHTML =
+      '<div class="activity-top">' +
+        '<div class="activity-name">' + esc(act.name) + '</div>' +
+        '<div class="activity-btns">' +
+          '<button class="activity-edit" title="Edit activity">✎</button>' +
+          '<button class="activity-delete" title="Delete">&times;</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="activity-stats">' + statsHtml + '</div>' +
+      '<div class="activity-actions">' +
+        '<button class="start-btn' + (running ? ' is-running' : '') + '" data-id="' + act.id + '">' + (running ? '⏸ Stop' : '▶ Start') + '</button>' +
+        '<button class="add-session-btn" title="Add a session manually">+ Entry</button>' +
+      '</div>';
+
+    card.querySelector('.activity-edit').addEventListener('click', () => openEditModal(act.id));
     card.querySelector('.activity-delete').addEventListener('click', () => openDelModal(act.id, act.name, count));
     card.querySelector('.start-btn').addEventListener('click', () => running ? stopTimer(act.id) : startTimer(act.id));
+    card.querySelector('.add-session-btn').addEventListener('click', () => openSessionModal(act.id, null));
     grid.appendChild(card);
   }
 }
@@ -889,8 +984,8 @@ function renderHistory(d) {
   }
 
   for (const s of sessions) {
-    const act  = d.activities.find(a => a.id === s.activityId);
-    const name  = act ? act.name : 'Deleted Activity';
+    const act   = d.activities.find(a => a.id === s.activityId);
+    const name  = act ? act.name  : 'Deleted Activity';
     const color = act ? act.color : '#7a6e60';
 
     const row = document.createElement('div');
@@ -899,7 +994,22 @@ function renderHistory(d) {
       '<div class="history-dot" style="background:' + color + '"></div>' +
       '<div class="history-name">' + esc(name) + '</div>' +
       '<div class="history-duration">' + fmt(s.duration) + '</div>' +
-      '<div class="history-time">' + fmtAgo(s.endedAt) + '</div>';
+      '<div class="history-time">' + fmtAgo(s.endedAt) + '</div>' +
+      '<div class="history-acts">' +
+        (act ? '<button class="history-act-btn" title="Edit session">✎</button>' : '') +
+        '<button class="history-act-btn del" title="Delete session">&times;</button>' +
+      '</div>';
+
+    if (act) {
+      row.querySelector('.history-act-btn').addEventListener('click', () => openSessionModal(s.activityId, s.id));
+    }
+    row.querySelector('.history-act-btn.del').addEventListener('click', () => {
+      const d2 = load();
+      d2.sessions = d2.sessions.filter(ss => ss.id !== s.id);
+      save(d2);
+      toast('Session deleted');
+      render();
+    });
     el.appendChild(row);
   }
 }
@@ -1033,7 +1143,154 @@ document.getElementById('btn-del-confirm').addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeAddModal(); closeDelModal(); }
+  if (e.key === 'Escape') { closeAddModal(); closeDelModal(); closeEditModal(); closeSessionModal(); }
+});
+
+// ── Edit Activity modal ───────────────────────────────
+
+function openEditModal(id) {
+  const d = load();
+  const act = d.activities.find(a => a.id === id);
+  if (!act) return;
+  pendingEditId   = id;
+  editPickedColor = act.color;
+  document.getElementById('edit-name').value = act.name;
+  const row = document.getElementById('edit-color-row');
+  row.innerHTML = '';
+  COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === act.color ? ' selected' : '');
+    sw.style.background = c;
+    sw.addEventListener('click', () => {
+      row.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      editPickedColor = c;
+    });
+    row.appendChild(sw);
+  });
+  document.getElementById('edit-overlay').classList.add('open');
+  document.getElementById('edit-name').focus();
+}
+
+function closeEditModal() {
+  pendingEditId = null;
+  document.getElementById('edit-overlay').classList.remove('open');
+}
+
+document.getElementById('btn-edit-cancel').addEventListener('click', closeEditModal);
+document.getElementById('edit-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeEditModal(); });
+
+document.getElementById('btn-edit-save').addEventListener('click', () => {
+  const name = document.getElementById('edit-name').value.trim();
+  if (!name) { document.getElementById('edit-name').focus(); return; }
+  const d = load();
+  const act = d.activities.find(a => a.id === pendingEditId);
+  if (!act) return;
+  act.name  = name;
+  act.color = editPickedColor;
+  save(d);
+  closeEditModal();
+  toast('Activity updated');
+  render();
+});
+
+document.getElementById('edit-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  document.getElementById('btn-edit-save').click();
+  if (e.key === 'Escape') closeEditModal();
+});
+
+// ── Add / Edit Session modal ──────────────────────────
+
+function updateSessionPreview() {
+  const sv = document.getElementById('session-start').value;
+  const ev = document.getElementById('session-end').value;
+  const el = document.getElementById('session-preview');
+  if (!sv || !ev) { el.textContent = '—'; el.style.color = ''; return; }
+  const start = new Date(sv).getTime();
+  const end   = new Date(ev).getTime();
+  if (end <= start) {
+    el.textContent = 'End must be after start';
+    el.style.color = 'var(--red)';
+    return;
+  }
+  el.style.color = '';
+  el.textContent = fmt(end - start);
+}
+
+function openSessionModal(actId, sessionId) {
+  const d   = load();
+  const act = d.activities.find(a => a.id === actId);
+  pendingSessionActId = actId;
+  pendingSessionId    = sessionId || null;
+
+  document.getElementById('session-title').textContent    = sessionId ? 'Edit Session' : 'Add Session';
+  document.getElementById('session-act-label').textContent = act ? act.name : '';
+
+  if (sessionId) {
+    const s = d.sessions.find(s => s.id === sessionId);
+    if (!s) return;
+    document.getElementById('session-start').value = toDatetimeLocal(s.startedAt);
+    document.getElementById('session-end').value   = toDatetimeLocal(s.endedAt);
+  } else {
+    const now = Date.now();
+    document.getElementById('session-start').value = toDatetimeLocal(now - 60 * 60 * 1000);
+    document.getElementById('session-end').value   = toDatetimeLocal(now);
+  }
+
+  const actions  = document.getElementById('session-actions');
+  const existDel = document.getElementById('btn-session-delete');
+  if (existDel) existDel.remove();
+  if (sessionId) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-danger';
+    delBtn.id = 'btn-session-delete';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => {
+      const d2 = load();
+      d2.sessions = d2.sessions.filter(s => s.id !== pendingSessionId);
+      save(d2);
+      closeSessionModal();
+      toast('Session deleted');
+      render();
+    });
+    actions.appendChild(delBtn);
+  }
+
+  updateSessionPreview();
+  document.getElementById('session-overlay').classList.add('open');
+}
+
+function closeSessionModal() {
+  pendingSessionActId = null;
+  pendingSessionId    = null;
+  document.getElementById('session-overlay').classList.remove('open');
+}
+
+document.getElementById('session-start').addEventListener('input', updateSessionPreview);
+document.getElementById('session-end').addEventListener('input',   updateSessionPreview);
+document.getElementById('btn-session-cancel').addEventListener('click', closeSessionModal);
+document.getElementById('session-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeSessionModal(); });
+
+document.getElementById('btn-session-save').addEventListener('click', () => {
+  const sv = document.getElementById('session-start').value;
+  const ev = document.getElementById('session-end').value;
+  if (!sv || !ev) { toast('Please fill both start and end times'); return; }
+  const start = new Date(sv).getTime();
+  const end   = new Date(ev).getTime();
+  if (end <= start) { toast('End must be after start'); return; }
+  const d      = load();
+  const isEdit = !!pendingSessionId;
+  if (isEdit) {
+    const s = d.sessions.find(s => s.id === pendingSessionId);
+    if (s) { s.startedAt = start; s.endedAt = end; s.duration = end - start; }
+  } else {
+    d.sessions.push({ id: uid(), activityId: pendingSessionActId, startedAt: start, endedAt: end, duration: end - start });
+  }
+  save(d);
+  const msg = isEdit ? 'Session updated' : 'Session added — ' + fmt(end - start);
+  closeSessionModal();
+  toast(msg);
+  render();
 });
 
 // ── Dashboard controls ───────────────────────────────
