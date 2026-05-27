@@ -477,8 +477,8 @@ body::before {
 .dist-list { display: flex; flex-direction: column; gap: 9px; }
 .dist-row {
   display: grid;
-  grid-template-columns: 120px 1fr 62px 34px;
-  align-items: center; gap: 10px;
+  grid-template-columns: 20px 110px 1fr 62px 34px;
+  align-items: center; gap: 8px;
 }
 .dist-name {
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -496,6 +496,21 @@ body::before {
 }
 .dist-pct { font-size: 11px; color: var(--muted); text-align: right; }
 
+/* ── PIE + DISTRIBUTION LAYOUT ── */
+.analytics-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.pie-wrap { flex-shrink: 0; }
+.dist-section { flex: 1; min-width: 0; }
+.dist-check {
+  width: 14px; height: 14px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.dist-muted { opacity: 0.35; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 600px) {
   .stats-row { grid-template-columns: 1fr 1fr; }
@@ -504,7 +519,9 @@ body::before {
   .header-add-btn { padding: 6px 12px; font-size: 12px; }
   .dash-summary { grid-template-columns: 1fr 1fr; }
   .dash-summary .stat-card:last-child { grid-column: 1 / -1; }
-  .dist-row { grid-template-columns: 90px 1fr 52px 30px; gap: 7px; }
+  .analytics-layout { flex-direction: column; }
+  .pie-wrap { align-self: center; }
+  .dist-row { grid-template-columns: 18px 75px 1fr 48px 28px; gap: 6px; }
 }
 </style>
 </head>
@@ -686,6 +703,7 @@ let pendingEditId = null;
 let editPickedColor = COLORS[0];
 let pendingSessionActId = null;
 let pendingSessionId = null;
+let dashHiddenIds = new Set();
 
 // ── Data ────────────────────────────────────────────
 
@@ -843,6 +861,41 @@ function rangeStats(d, from, to) {
   return { actMap, totalMs, totalSessions };
 }
 
+function buildPieSVG(visibleEntries, visibleTotalMs) {
+  const R = 52, cx = 70, cy = 70, size = 140, sw = 24;
+  const C = 2 * Math.PI * R;
+  let svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '">';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--surf2)" stroke-width="' + sw + '"/>';
+  if (visibleTotalMs > 0) {
+    let cumRot = -90;
+    for (const e of visibleEntries) {
+      const frac   = e.ms / visibleTotalMs;
+      const segLen = Math.max(0, frac * C - 1.5);
+      svg +=
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none"' +
+        ' stroke="' + e.color + '" stroke-width="' + sw + '"' +
+        ' stroke-dasharray="' + segLen.toFixed(2) + ' ' + C.toFixed(2) + '"' +
+        ' transform="rotate(' + cumRot.toFixed(2) + ',' + cx + ',' + cy + ')"/>';
+      cumRot += frac * 360;
+    }
+  }
+  const label = visibleTotalMs > 0 ? fmt(visibleTotalMs) : '';
+  const parts = label.split(' ');
+  if (parts.length >= 2) {
+    svg +=
+      '<text x="' + cx + '" y="' + (cy - 3) + '" text-anchor="middle"' +
+      ' fill="var(--text)" font-family="Space Mono,monospace" font-size="11" font-weight="700">' + parts[0] + '</text>' +
+      '<text x="' + cx + '" y="' + (cy + 12) + '" text-anchor="middle"' +
+      ' fill="var(--text2)" font-family="Space Mono,monospace" font-size="9">' + parts.slice(1).join(' ') + '</text>';
+  } else if (label) {
+    svg +=
+      '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle"' +
+      ' fill="var(--text)" font-family="Space Mono,monospace" font-size="11" font-weight="700">' + label + '</text>';
+  }
+  svg += '</svg>';
+  return svg;
+}
+
 function renderDashboard(d) {
   const range = getDashRange();
   const distEl = document.getElementById('dash-dist');
@@ -875,26 +928,79 @@ function renderDashboard(d) {
     return;
   }
 
-  const entries = Object.entries(actMap).sort((a, b) => b[1].ms - a[1].ms);
+  const entries = Object.entries(actMap)
+    .sort((a, b) => b[1].ms - a[1].ms)
+    .map(([id, { ms }]) => {
+      const act = d.activities.find(a => a.id === id);
+      return { id, ms, name: act ? act.name : 'Deleted Activity', color: act ? act.color : '#7a6e60', hidden: dashHiddenIds.has(id) };
+    });
+
+  const visibleEntries  = entries.filter(e => !e.hidden);
+  const visibleTotalMs  = visibleEntries.reduce((s, e) => s + e.ms, 0);
+
+  const layout = document.createElement('div');
+  layout.className = 'analytics-layout';
+
+  const pieWrap = document.createElement('div');
+  pieWrap.className = 'pie-wrap';
+  pieWrap.innerHTML = buildPieSVG(visibleEntries, visibleTotalMs);
+  layout.appendChild(pieWrap);
+
+  const distSection = document.createElement('div');
+  distSection.className = 'dist-section';
   const list = document.createElement('div');
   list.className = 'dist-list';
 
-  for (const [id, { ms }] of entries) {
-    const act   = d.activities.find(a => a.id === id);
-    const name  = act ? act.name  : 'Deleted Activity';
-    const color = act ? act.color : '#7a6e60';
-    const pct   = Math.round(ms / totalMs * 100);
+  for (const entry of entries) {
+    const pct = visibleTotalMs > 0 && !entry.hidden
+      ? Math.round(entry.ms / visibleTotalMs * 100)
+      : 0;
 
     const row = document.createElement('div');
     row.className = 'dist-row';
-    row.innerHTML =
-      '<div class="dist-name" title="' + esc(name) + '">' + esc(name) + '</div>' +
-      '<div class="dist-bar-wrap"><div class="dist-bar" style="width:' + pct + '%;background:' + color + '"></div></div>' +
-      '<div class="dist-time">' + fmt(ms) + '</div>' +
-      '<div class="dist-pct">' + pct + '%</div>';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !entry.hidden;
+    cb.className = 'dist-check';
+    cb.addEventListener('change', () => {
+      if (cb.checked) dashHiddenIds.delete(entry.id);
+      else            dashHiddenIds.add(entry.id);
+      renderDashboard(load());
+    });
+    row.appendChild(cb);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'dist-name' + (entry.hidden ? ' dist-muted' : '');
+    nameEl.title = entry.name;
+    nameEl.textContent = entry.name;
+    row.appendChild(nameEl);
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'dist-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'dist-bar';
+    bar.style.width = pct + '%';
+    bar.style.background = entry.hidden ? 'var(--muted2)' : entry.color;
+    barWrap.appendChild(bar);
+    row.appendChild(barWrap);
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'dist-time' + (entry.hidden ? ' dist-muted' : '');
+    timeEl.textContent = fmt(entry.ms);
+    row.appendChild(timeEl);
+
+    const pctEl = document.createElement('div');
+    pctEl.className = 'dist-pct';
+    pctEl.textContent = entry.hidden ? '—' : pct + '%';
+    row.appendChild(pctEl);
+
     list.appendChild(row);
   }
-  distEl.appendChild(list);
+
+  distSection.appendChild(list);
+  layout.appendChild(distSection);
+  distEl.appendChild(layout);
 }
 
 // ── Render ──────────────────────────────────────────
